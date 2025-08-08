@@ -2,7 +2,9 @@ FraudLens — See Every Risk Before It Sees You
 
 🌐 **Live Demo:** [https://fraud-lens.vercel.app/](https://fraud-lens.vercel.app/)  
 
+
 <img width="1014" height="568" alt="Image" src="https://github.com/user-attachments/assets/418763e7-1f45-459c-99c9-00c1dbc93687" />
+
 
 FraudLens is an interactive dashboard built for one purpose — to help anti-fraud, compliance, and risk teams uncover issues before they become problems.
 Whether you’re reviewing client verification cases, chasing suspicious patterns, or conducting secondary audits, FraudLens gives you the speed, clarity, and control to act decisively.
