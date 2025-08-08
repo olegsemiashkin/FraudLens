@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Traffic Checks & Actions — History</title>
+<style>
+:root{ --bg:#f6f8fc;--panel:#fff;--panel2:#f2f5fa;--text:#0f172a;--muted:#5b6576;--border:rgba(15,23,42,.10);
+       --accent:#2563eb;--ok:#059669;--err:#dc2626;--hover:rgba(15,23,42,.05);}
+html[data-theme="dark"]{ --bg:#0f1115;--panel:#141826;--panel2:#0d1220;--text:#e7ebf6;--muted:#97a0b3;--border:rgba(255,255,255,.10);
+       --accent:#3b82f6;--ok:#10b981;--err:#ef4444;--hover:rgba(255,255,255,.05);}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+.wrap{max-width:1280px;margin:28px auto;padding:0 20px}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+h1{margin:0;font-size:28px}
+.theme{display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:999px;padding:6px 10px}
+.switch{width:44px;height:22px;border-radius:999px;background:var(--panel2);border:1px solid var(--border);position:relative;cursor:pointer}
+.knob{position:absolute;top:50%;left:24px;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;background:var(--accent);transition:left .2s}
+html[data-theme="dark"] .knob{left:2px}
+
+.card{background:var(--panel);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.12)}
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--border)}
+.select, .search{display:inline-flex;align-items:center;background:var(--panel2);border:1px solid var(--border);border-radius:16px;height:44px;padding:0 16px}
+.select select, .search input{background:transparent;border:0;color:var(--text);outline:none;font:inherit;min-width:220px;height:100%}
+.search input::placeholder{color:var(--muted)}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:16px;height:44px;padding:0 18px;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+
+table{width:100%;border-collapse:separate;border-spacing:0}
+th{text-align:left;font-size:12px;color:var(--muted);padding:14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--panel)}
+td{padding:16px;border-bottom:1px dashed var(--border);vertical-align:top}
+tr.data:hover{background:var(--hover);cursor:pointer}
+.status{display:inline-block;padding:6px 10px;border-radius:10px;font-weight:800}
+.s-ok{background:rgba(16,185,129,.16);color:var(--ok)}
+.s-err{background:rgba(239,68,68,.16);color:var(--err)}
+.tag{display:inline-block;font-size:12px;background:var(--panel2);border:1px solid var(--border);padding:6px 10px;border-radius:10px;margin:2px}
+.details td{border-bottom:none;padding:20px;background:var(--panel2)}
+.box{display:grid;grid-template-columns:1.1fr .9fr;gap:24px}
+.section-title{font-weight:800;margin:4px 0 8px;font-size:16px}
+.card2{border:1px solid var(--border);border-radius:12px;background:var(--panel);padding:12px}
+.group{margin-bottom:10px}
+.group h4{margin:4px 0 6px;font-size:13px;color:var(--muted)}
+.acc-list a{color:#2563eb;text-decoration:underline;display:block;margin:2px 0}
+.kv{display:grid;grid-template-columns:220px 1fr;gap:8px 12px;margin-top:10px;align-items:center}
+.kv .label{color:var(--muted)}
+.mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>Traffic Checks & Actions — History</h1>
+    <div class="theme"><span class="muted">Theme</span><div id="theme" class="switch"><div class="knob"></div></div></div>
+  </div>
+
+  <div class="card">
+    <div class="controls">
+      <div class="select"><select id="showSel">
+        <option value="">Show (all)</option>
+        <option value="viol">Only with violations</option>
+        <option value="cases">Only with cases</option>
+      </select></div>
+      <div class="select"><select id="statusSel">
+        <option value="">Status (all)</option>
+        <option value="ok">No violations</option>
+        <option value="err">Violations</option>
+      </select></div>
+      <div class="select"><select id="typeSel">
+        <option value="">Violation type (all)</option><option>KYC/Document Mismatch</option><option>Sanctions/PEP Match</option><option>IP / Proxy / VPN Risk</option><option>Device Fingerprint Anomaly</option><option>Payment Details Mismatch</option><option>Velocity Anomaly / Mass Sign‑ups</option><option>Bonus/Referral Abuse</option><option>Suspected Bot/Script Activity</option></select></div>
+      <div class="search"><input id="q" placeholder="Search in comment…" /></div>
+      <button id="apply" class="btn">Apply</button>
+      <button id="reset" class="btn ghost">Reset</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:36px"><input type="checkbox" id="selectAll"></th>
+          <th id="sortDate" style="cursor:pointer;width:220px">Start date ▲</th>
+          <th style="width:160px">Status</th>
+          <th>Violation type</th>
+          <th style="width:170px">Accounts checked</th>
+          <th style="width:170px">Rule triggers</th>
+          <th style="width:200px">Accounts with violations</th>
+          <th style="width:220px">Source of check</th>
+          <th style="width:180px">Assignee</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+var data = [{"id": 2000, "startedAt": "2025-08-08T14:30:33", "status": "err", "types": ["KYC/Document Mismatch"], "checked": 122, "events": 7, "accounts": [{"id": 427330525, "vtype": "KYC/Document Mismatch"}, {"id": 427584191, "vtype": "KYC/Document Mismatch"}, {"id": 427406870, "vtype": "KYC/Document Mismatch"}], "exec": "@auditor_a", "source": "Re‑audit (Secondary Review)", "cases": [{"id": "CASE-38970", "link": "#", "priority": "High", "owner": "@auditor_a"}]}, {"id": 2001, "startedAt": "2025-08-07T14:30:33", "status": "err", "types": ["Device Fingerprint Anomaly", "IP / Proxy / VPN Risk"], "checked": 132, "events": 7, "accounts": [{"id": 427505863, "vtype": "IP / Proxy / VPN Risk"}, {"id": 427430108, "vtype": "IP / Proxy / VPN Risk"}, {"id": 427656650, "vtype": "Device Fingerprint Anomaly"}, {"id": 427461616, "vtype": "IP / Proxy / VPN Risk"}, {"id": 427434507, "vtype": "Device Fingerprint Anomaly"}, {"id": 427286867, "vtype": "IP / Proxy / VPN Risk"}, {"id": 427536919, "vtype": "IP / Proxy / VPN Risk"}], "exec": "@auditor_b", "source": "Case Logs", "cases": [{"id": "CASE-38969", "link": "#", "priority": "Low", "owner": "@auditor_b"}]}, {"id": 2002, "startedAt": "2025-08-06T14:30:33", "status": "err", "types": ["Device Fingerprint Anomaly", "IP / Proxy / VPN Risk"], "checked": 136, "events": 6, "accounts": [{"id": 427562424, "vtype": "Device Fingerprint Anomaly"}, {"id": 427386537, "vtype": "Device Fingerprint Anomaly"}, {"id": 427657838, "vtype": "IP / Proxy / VPN Risk"}], "exec": "@auditor_c", "source": "Scheduled Compliance Check", "cases": []}, {"id": 2003, "startedAt": "2025-08-05T14:30:33", "status": "err", "types": ["Payment Details Mismatch", "Bonus/Referral Abuse"], "checked": 153, "events": 7, "accounts": [{"id": 427426183, "vtype": "Bonus/Referral Abuse"}], "exec": "@auditor_d", "source": "Scheduled Compliance Check", "cases": []}, {"id": 2004, "startedAt": "2025-08-04T14:30:33", "status": "err", "types": ["Sanctions/PEP Match"], "checked": 94, "events": 7, "accounts": [{"id": 427385865, "vtype": "Sanctions/PEP Match"}, {"id": 427564885, "vtype": "Sanctions/PEP Match"}, {"id": 427320246, "vtype": "Sanctions/PEP Match"}, {"id": 427592408, "vtype": "Sanctions/PEP Match"}, {"id": 427572033, "vtype": "Sanctions/PEP Match"}, {"id": 427579088, "vtype": "Sanctions/PEP Match"}, {"id": 427645917, "vtype": "Sanctions/PEP Match"}], "exec": "@auditor_e", "source": "Anti‑fraud System Trigger", "cases": [{"id": "CASE-38966", "link": "#", "priority": "Low", "owner": "@auditor_e"}]}, {"id": 2005, "startedAt": "2025-08-03T14:30:33", "status": "err", "types": ["Device Fingerprint Anomaly"], "checked": 113, "events": 9, "accounts": [{"id": 427361506, "vtype": "Device Fingerprint Anomaly"}, {"id": 427280420, "vtype": "Device Fingerprint Anomaly"}, {"id": 427667253, "vtype": "Device Fingerprint Anomaly"}], "exec": "@auditor_f", "source": "Re‑audit (Secondary Review)", "cases": [{"id": "CASE-38965", "link": "#", "priority": "High", "owner": "@auditor_f"}]}, {"id": 2006, "startedAt": "2025-08-02T14:30:33", "status": "err", "types": ["Sanctions/PEP Match", "Suspected Bot/Script Activity"], "checked": 99, "events": 4, "accounts": [{"id": 427327782, "vtype": "Sanctions/PEP Match"}, {"id": 427583539, "vtype": "Sanctions/PEP Match"}, {"id": 427370934, "vtype": "Suspected Bot/Script Activity"}, {"id": 427452755, "vtype": "Suspected Bot/Script Activity"}], "exec": "@auditor_g", "source": "Re‑audit (Secondary Review)", "cases": []}, {"id": 2007, "startedAt": "2025-08-01T14:30:33", "status": "err", "types": ["Bonus/Referral Abuse", "Suspected Bot/Script Activity"], "checked": 92, "events": 1, "accounts": [{"id": 427535677, "vtype": "Suspected Bot/Script Activity"}], "exec": "@auditor_h", "source": "Scheduled Compliance Check", "cases": [{"id": "CASE-38963", "link": "#", "priority": "Medium", "owner": "@auditor_h"}]}, {"id": 2008, "startedAt": "2025-07-31T14:30:33", "status": "ok", "types": [], "checked": 100, "events": 0, "accounts": [], "exec": "@auditor_i", "source": "Re‑audit (Secondary Review)", "cases": []}, {"id": 2009, "startedAt": "2025-07-30T14:30:33", "status": "ok", "types": [], "checked": 142, "events": 0, "accounts": [], "exec": "@auditor_j", "source": "Re‑audit (Secondary Review)", "cases": []}];
+
+var sortAsc=false;
+var rowsEl=document.getElementById('rows');
+var selected=new Set();
+
+function fmtDate(iso){ return new Date(iso).toLocaleString('en-US',{hour12:false, month:'short', day:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit'}); }
+function badge(s){ return s==='ok' ? '<span class="status s-ok">No violations</span>' : '<span class="status s-err">Violations</span>'; }
+function tags(arr){ if(!arr || arr.length===0) return '—'; var out=''; for(var i=0;i<arr.length;i++) out+='<span class="tag">'+arr[i]+'</span>'; return out; }
+
+function groupAccounts(accs){
+  var byType = {};
+  for (var i=0;i<accs.length;i++){
+    var t = accs[i].vtype || 'Unclassified';
+    if(!byType[t]) byType[t]=[];
+    byType[t].push(accs[i].id);
+  }
+  var out = '';
+  for (var t in byType){
+    out += '<div class="group">';
+    out += '<h4>'+t+' — '+byType[t].length+' account(s)</h4>';
+    out += '<div class="acc-list">';
+    for (var j=0;j<byType[t].length;j++){
+      var id = byType[t][j];
+      out += '<a class="mono" href="/user/'+id+'">/user/'+id+'</a>';
+    }
+    out += '</div></div>';
+  }
+  return out;
+}
+
+function render(list){
+  var html='';
+  for(var i=0;i<list.length;i++){ var r=list[i];
+    var accCount=r.accounts? r.accounts.length : 0;
+    html += '\
+    <tr class="data" data-id="'+r.id+'">\
+      <td><input type="checkbox" class="rowCheck" data-id="'+r.id+'"></td>\
+      <td class="mono">'+fmtDate(r.startedAt)+'</td>\
+      <td>'+badge(r.status)+'</td>\
+      <td>'+tags(r.types)+'</td>\
+      <td class="mono">'+r.checked+'</td>\
+      <td class="mono">'+r.events+'</td>\
+      <td class="mono">'+accCount+'</td>\
+      <td>'+r.source+'</td>\
+      <td>'+r.exec+'</td>\
+    </tr>\
+    <tr class="details" id="det-'+r.id+'" style="display:none">\
+      <td colspan="9">\
+        <div class="box">\
+          <div>\
+            <div class="section-title">Violation card</div>\
+            <div class="card2">\
+              <div class="kv">\
+                <div class="label">Status</div><div>'+ (r.status==='ok'?'No violations':'Violations') +'</div>\
+                <div class="label">Accounts checked</div><div class="mono">'+r.checked+'</div>\
+                <div class="label">Rule triggers</div><div class="mono">'+r.events+'</div>\
+                <div class="label">Accounts with violations</div><div class="mono">'+accCount+'</div>\
+                <div class="label">Source of check</div><div>'+r.source+'</div>\
+                <div class="label">Assignee</div><div>'+r.exec+'</div>\
+                <div class="label">Start date</div><div class="mono">'+fmtDate(r.startedAt)+'</div>\
+                '+(r.cases && r.cases.length?'<div class="label">Cases</div><div>'+r.cases.map(function(c){return '<a href="'+c.link+'">'+c.id+'</a> (priority: '+c.priority+', owner: '+c.owner+')';}).join('<br>')+'</div>':'')+'\
+              </div>\
+            </div>\
+            <div class="section-title" style="margin-top:14px">Violation types</div>\
+            <div>'+tags(r.types)+'</div>\
+          </div>\
+          <div>\
+            <div class="section-title">Accounts by violation type</div>\
+            <div class="card2">\
+              '+(accCount ? groupAccounts(r.accounts) : '<span class="muted">—</span>')+'\
+            </div>\
+          </div>\
+        </div>\
+      </td>\
+    </tr>';
+  }
+  rowsEl.innerHTML = html;
+}
+
+function apply(){
+  var showSel=document.getElementById('showSel').value;
+  var statusSel=document.getElementById('statusSel').value;
+  var typeSel=document.getElementById('typeSel').value;
+  var q=document.getElementById('q').value.toLowerCase();
+
+  var list=data.slice();
+  if(showSel==='viol') list=list.filter(function(r){ return r.status==='err'; });
+  if(showSel==='cases') list=list.filter(function(r){ return (r.cases && r.cases.length>0); });
+  if(statusSel) list=list.filter(function(r){ return r.status===statusSel; });
+  if(typeSel) list=list.filter(function(r){ return r.types && r.types.indexOf(typeSel)>-1; });
+  if(q) list=list.filter(function(r){ return (r.source||'').toLowerCase().indexOf(q)>-1 || (r.exec||'').toLowerCase().indexOf(q)>-1; });
+
+  list.sort(function(a,b){ return sortAsc ? (new Date(a.startedAt)-new Date(b.startedAt)) : (new Date(b.startedAt)-new Date(a.startedAt)); });
+  render(list);
+}
+
+var sortAsc=false;
+document.getElementById('apply').addEventListener('click',apply);
+document.getElementById('reset').addEventListener('click',function(){
+  document.getElementById('showSel').value='';
+  document.getElementById('statusSel').value='';
+  document.getElementById('typeSel').value='';
+  document.getElementById('q').value='';
+  apply();
+});
+document.getElementById('sortDate').addEventListener('click',function(){ sortAsc=!sortAsc; document.getElementById('sortDate').innerText='Start date '+(sortAsc?'▼':'▲'); apply(); });
+document.getElementById('theme').addEventListener('click',function(){
+  var html=document.documentElement;
+  html.setAttribute('data-theme', html.getAttribute('data-theme')==='dark'?'light':'dark');
+});
+
+rowsEl.addEventListener('click',function(e){
+  if(e.target && e.target.classList && e.target.classList.contains('rowCheck')){
+    e.stopPropagation();
+    return;
+  }
+  var row=e.target.closest ? e.target.closest('tr.data') : null;
+  if(row){
+    var id=row.getAttribute('data-id');
+    var det=document.getElementById('det-'+id);
+    if(det) det.style.display = det.style.display==='none' ? 'table-row' : 'none';
+  }
+});
+
+document.getElementById('selectAll').addEventListener('change',function(e){
+  var checked=e.target.checked;
+  var boxes=document.querySelectorAll('.rowCheck');
+  for(var i=0;i<boxes.length;i++){ boxes[i].checked=checked; }
+});
+
+// initial render
+apply();
+</script>
+</body>
+</html>
